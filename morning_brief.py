@@ -39,6 +39,10 @@ TOPICS = {
     "AI in Filmmaking": "AI filmmaking",
     "Filmmaking Tools & Gear": "filmmaking tools gear",
     "SF Film Scene": "San Francisco film scene",
+    "AI Industry": "AI startup funding product launch",
+    "Venture Capital & PE": "venture capital private equity tech deal",
+    "Tech Brand Marketing": "tech brand content marketing campaign",
+    "Silicon Valley Business": "Silicon Valley startup founder",
 }
 
 ARTICLES_PER_FEED = 15   # how many articles to pull per topic
