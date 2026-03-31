@@ -17,6 +17,7 @@ from urllib.parse import quote_plus
 import feedparser
 import anthropic
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,9 +63,23 @@ def google_news_url(query: str) -> str:
     )
 
 
+def resolve_url(google_url: str) -> str:
+    """Follow Google News redirect to get the real article URL."""
+    try:
+        resp = requests.get(
+            google_url,
+            allow_redirects=True,
+            timeout=8,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        return resp.url
+    except Exception:
+        return google_url  # fall back to original if resolution fails
+
+
 def fetch_articles(topics: dict[str, str], per_feed: int) -> list[dict]:
-    articles = []
-    seen_urls: set[str] = set()
+    raw_articles = []
+    seen_google_urls: set[str] = set()
 
     for label, query in topics.items():
         url = google_news_url(query)
@@ -76,17 +91,33 @@ def fetch_articles(topics: dict[str, str], per_feed: int) -> list[dict]:
 
         for entry in feed.entries[:per_feed]:
             link = entry.get("link", "")
-            if link in seen_urls:
+            if link in seen_google_urls:
                 continue
-            seen_urls.add(link)
+            seen_google_urls.add(link)
 
-            articles.append({
+            raw_articles.append({
                 "topic": label,
                 "title": html.unescape(entry.get("title", "(no title)")),
                 "url": link,
                 "published": entry.get("published", ""),
                 "summary": html.unescape(entry.get("summary", "")),
             })
+
+    # Resolve all Google redirect URLs in parallel
+    log.info("Resolving %d URLs…", len(raw_articles))
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(resolve_url, a["url"]): i for i, a in enumerate(raw_articles)}
+        for future in as_completed(futures):
+            idx = futures[future]
+            raw_articles[idx]["url"] = future.result()
+
+    # Deduplicate by resolved URL
+    articles = []
+    seen_resolved: set[str] = set()
+    for a in raw_articles:
+        if a["url"] not in seen_resolved:
+            seen_resolved.add(a["url"])
+            articles.append(a)
 
     log.info("Collected %d unique articles across %d topics", len(articles), len(topics))
     return articles
@@ -96,10 +127,16 @@ def fetch_articles(topics: dict[str, str], per_feed: int) -> list[dict]:
 # Score & rank via Claude
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = f"""You are a content strategist who curates industry news for LinkedIn.
-Your audience: {AUDIENCE_CONTEXT}
-You pick stories that will spark engagement — news they haven't seen yet,
-trend signals, gear/tech reveals, business shifts, or local SF/LA/NYC angles."""
+SYSTEM_PROMPT = f"""You are a content strategist helping Colin McAuliffe — a filmmaker and founder
+who has run Zero One Digital Media for 22 years, working with clients like Adobe, Niantic,
+Bessemer Venture Partners, MTV, and Comedy Central. He is based in Sausalito, CA.
+His LinkedIn voice is casual, direct, and insider — no jargon, no corporate polish, no hype.
+Think: someone who has seen everything in this industry and isn't easily impressed.
+
+His audience: {AUDIENCE_CONTEXT}
+
+Pick stories with real signal — gear shifts, business model changes, AI disruption, or local
+SF/LA/NYC angles. Skip puff pieces and press releases."""
 
 
 def build_ranking_prompt(articles: list[dict]) -> str:
@@ -127,7 +164,8 @@ Each object:
   "title": "<article title>",
   "url": "<article url>",
   "reason": "<one sentence: why my audience will care>",
-  "angle": "<one of: agree | disagree | add insider context> — with a one-sentence prompt for my commentary>"
+  "angle": "<one of: agree | disagree | add insider context> — with a one-sentence prompt for my commentary>",
+  "hook": "<a 1-2 sentence LinkedIn opener in Colin's voice: casual, direct, no BS — like a filmmaker with 22 years of experience reacting to the news. No buzzwords, no hype. Can end with a question but doesn't have to>"
 }}"""
 
 
@@ -141,7 +179,7 @@ def rank_articles(articles: list[dict]) -> list[dict]:
     log.info("Sending %d articles to Claude for ranking…", len(articles))
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1024,
+        max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": build_ranking_prompt(articles)}],
     )
@@ -181,14 +219,21 @@ def build_slack_payload(picks: list[dict]) -> dict:
                 "emoji": True,
             },
         },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "<@U067NNBTPL0> here's today's content feed",
+            },
+        },
         {"type": "divider"},
     ]
 
     for i, pick in enumerate(picks, 1):
         angle_raw = pick.get("angle", "")
-        # Angle field is "agree — commentary prompt" or similar
         angle_key = angle_raw.split("—")[0].strip().lower()
         emoji = ANGLE_EMOJI.get(angle_key, "💬")
+        hook = pick.get("hook", "")
 
         blocks.append(
             {
@@ -197,8 +242,9 @@ def build_slack_payload(picks: list[dict]) -> dict:
                     "type": "mrkdwn",
                     "text": (
                         f"*{i}. <{pick['url']}|{pick['title']}>*\n"
-                        f"_{pick['reason']}_\n"
-                        f"{emoji} *{angle_raw}*"
+                        f"_{pick['reason']}_\n\n"
+                        f"{emoji} *Angle:* {angle_raw}\n\n"
+                        f":pencil: *Suggested hook:*\n{hook}"
                     ),
                 },
             }
