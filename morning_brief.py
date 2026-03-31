@@ -45,6 +45,15 @@ TOPICS = {
     "Creator Economy": "creator economy brand deal content monetization",
 }
 
+# Direct RSS feeds from trusted outlets
+DIRECT_FEEDS = {
+    "Ad Age": "https://adage.com/rss/rss.xml",
+    "The Economist": "https://www.economist.com/rss/the_world_this_week_rss.xml",
+    "Fast Company": "https://www.fastcompany.com/latest/rss",
+    "Wired": "https://www.wired.com/feed/rss",
+    "Vice": "https://www.vice.com/en/rss",
+}
+
 ARTICLES_PER_FEED = 15   # how many articles to pull per topic
 TOP_N = 6                # how many to surface to Slack
 MAX_AGE_DAYS = 7         # ignore articles older than this
@@ -105,6 +114,32 @@ def fetch_articles(topics: dict[str, str], per_feed: int) -> list[dict]:
                 continue
 
             # Filter by age if published_parsed is available
+            published_parsed = entry.get("published_parsed")
+            if published_parsed:
+                published_dt = datetime(*published_parsed[:6], tzinfo=timezone.utc)
+                if published_dt < cutoff:
+                    continue
+
+            seen_google_urls.add(link)
+            raw_articles.append({
+                "topic": label,
+                "title": html.unescape(entry.get("title", "(no title)")),
+                "url": link,
+                "published": entry.get("published", ""),
+                "summary": html.unescape(entry.get("summary", "")),
+            })
+
+    # Pull direct RSS feeds (no redirect needed)
+    for label, feed_url in DIRECT_FEEDS.items():
+        log.info("Fetching: %s", label)
+        feed = feedparser.parse(feed_url)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
+
+        for entry in feed.entries[:ARTICLES_PER_FEED]:
+            link = entry.get("link", "")
+            if not link or link in seen_google_urls:
+                continue
+
             published_parsed = entry.get("published_parsed")
             if published_parsed:
                 published_dt = datetime(*published_parsed[:6], tzinfo=timezone.utc)
