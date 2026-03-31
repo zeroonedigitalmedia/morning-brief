@@ -1,0 +1,29 @@
+name: Morning Brief
+
+on:
+  schedule:
+    - cron: "0 15 * * 1-5"   # 8am ET (UTC-5) weekdays — adjust if you're on PT
+  workflow_dispatch:           # lets you trigger it manually from GitHub UI
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Morning Brief
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python morning_brief.py
