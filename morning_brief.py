@@ -43,7 +43,7 @@ TOPICS = {
 
 ARTICLES_PER_FEED = 15   # how many articles to pull per topic
 TOP_N = 6                # how many to surface to Slack
-MAX_AGE_DAYS = 3         # ignore articles older than this
+MAX_AGE_DAYS = 7         # ignore articles older than this
 
 AUDIENCE_CONTEXT = (
     "Creative directors, video producers, independent filmmakers, and founders "
@@ -152,7 +152,7 @@ Pick stories with real signal — gear shifts, business model changes, AI disrup
 SF/LA/NYC angles. Skip puff pieces and press releases."""
 
 
-def build_ranking_prompt(articles: list[dict]) -> str:
+def build_ranking_prompt(articles: list[dict], n: int) -> str:
     lines = []
     for i, a in enumerate(articles):
         lines.append(
@@ -165,12 +165,12 @@ def build_ranking_prompt(articles: list[dict]) -> str:
     article_block = "\n".join(lines)
 
     return f"""Below are {len(articles)} recent articles.
-Pick the {TOP_N} most valuable for my LinkedIn audience.
+Pick the {n} most valuable for my LinkedIn audience.
 
 ARTICLES:
 {article_block}
 
-Respond with a JSON array of exactly {TOP_N} objects. No prose, no markdown fences.
+Respond with a JSON array of exactly {n} objects. No prose, no markdown fences.
 Each object:
 {{
   "index": <original index>,
@@ -189,12 +189,13 @@ def rank_articles(articles: list[dict]) -> list[dict]:
 
     client = anthropic.Anthropic(api_key=api_key)
 
-    log.info("Sending %d articles to Claude for ranking…", len(articles))
+    n = min(TOP_N, len(articles))
+    log.info("Sending %d articles to Claude, requesting top %d…", len(articles), n)
     message = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=4096,
         system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": build_ranking_prompt(articles)}],
+        messages=[{"role": "user", "content": build_ranking_prompt(articles, n)}],
     )
 
     raw = message.content[0].text.strip()
