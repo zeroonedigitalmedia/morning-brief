@@ -39,10 +39,10 @@ TOPICS = {
     "AI in Filmmaking": "AI filmmaking",
     "Filmmaking Tools & Gear": "filmmaking tools gear",
     "SF Film Scene": "San Francisco film scene",
-    "AI Industry": "AI startup funding product launch",
     "Venture Capital & PE": "venture capital private equity tech deal",
     "Tech Brand Marketing": "tech brand content marketing campaign",
     "Silicon Valley Business": "Silicon Valley startup founder",
+    "Creator Economy": "creator economy brand deal content monetization",
 }
 
 ARTICLES_PER_FEED = 15   # how many articles to pull per topic
@@ -152,8 +152,9 @@ Think: someone who has seen everything in this industry and isn't easily impress
 
 His audience: {AUDIENCE_CONTEXT}
 
-Pick stories with real signal — gear shifts, business model changes, AI disruption, or local
-SF/LA/NYC angles. Skip puff pieces and press releases."""
+Pick stories with real signal — gear shifts, business model changes, industry disruption, or local
+SF/LA/NYC angles. Skip puff pieces and press releases.
+Spread picks across different topics — do not over-index on AI stories."""
 
 
 def build_ranking_prompt(articles: list[dict], n: int) -> str:
