@@ -14,6 +14,9 @@ import logging
 from datetime import datetime
 from urllib.parse import quote_plus
 
+import time
+from datetime import datetime, timezone, timedelta
+
 import feedparser
 import anthropic
 import requests
@@ -38,8 +41,9 @@ TOPICS = {
     "SF Film Scene": "San Francisco film scene",
 }
 
-ARTICLES_PER_FEED = 10   # how many articles to pull per topic
-TOP_N = 3                # how many to surface to Slack
+ARTICLES_PER_FEED = 15   # how many articles to pull per topic
+TOP_N = 6                # how many to surface to Slack
+MAX_AGE_DAYS = 3         # ignore articles older than this
 
 AUDIENCE_CONTEXT = (
     "Creative directors, video producers, independent filmmakers, and founders "
@@ -89,12 +93,21 @@ def fetch_articles(topics: dict[str, str], per_feed: int) -> list[dict]:
         if feed.bozo:
             log.warning("Feed parse warning for '%s': %s", label, feed.bozo_exception)
 
+        cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
+
         for entry in feed.entries[:per_feed]:
             link = entry.get("link", "")
             if link in seen_google_urls:
                 continue
-            seen_google_urls.add(link)
 
+            # Filter by age if published_parsed is available
+            published_parsed = entry.get("published_parsed")
+            if published_parsed:
+                published_dt = datetime(*published_parsed[:6], tzinfo=timezone.utc)
+                if published_dt < cutoff:
+                    continue
+
+            seen_google_urls.add(link)
             raw_articles.append({
                 "topic": label,
                 "title": html.unescape(entry.get("title", "(no title)")),
