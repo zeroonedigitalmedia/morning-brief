@@ -199,14 +199,15 @@ def rank_articles(articles: list[dict]) -> list[dict]:
     )
 
     raw = message.content[0].text.strip()
+    log.info("Claude raw response (first 300 chars): %s", raw[:300])
 
-    # Strip accidental markdown fences
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+    # Extract JSON array from anywhere in the response
+    import re
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
+    if not match:
+        raise ValueError(f"No JSON array found in Claude response: {raw[:500]}")
 
-    picks = json.loads(raw)
+    picks = json.loads(match.group())
     log.info("Claude selected %d articles", len(picks))
     return picks
 
