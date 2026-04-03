@@ -8,14 +8,12 @@ Cron: 0 8 * * * /usr/bin/env python3 /path/to/morning_brief.py
 
 import os
 import sys
+import re
 import json
 import html
 import logging
-from datetime import datetime
-from urllib.parse import quote_plus
-
-import time
 from datetime import datetime, timezone, timedelta
+from urllib.parse import quote_plus
 
 import feedparser
 import anthropic
@@ -242,7 +240,6 @@ def rank_articles(articles: list[dict]) -> list[dict]:
     log.info("Claude raw response (first 300 chars): %s", raw[:300])
 
     # Extract JSON array from anywhere in the response
-    import re
     match = re.search(r'\[.*\]', raw, re.DOTALL)
     if not match:
         raise ValueError(f"No JSON array found in Claude response: {raw[:500]}")
@@ -264,7 +261,8 @@ ANGLE_EMOJI = {
 
 
 def build_slack_payload(picks: list[dict]) -> dict:
-    today = datetime.now().strftime("%A, %B %-d")
+    now = datetime.now()
+    today = now.strftime(f"%A, %B {now.day}")
     blocks = [
         {
             "type": "header",
