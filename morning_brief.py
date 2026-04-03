@@ -56,7 +56,7 @@ DIRECT_FEEDS = {
 
 ARTICLES_PER_FEED = 15   # how many articles to pull per topic
 TOP_N = 6                # how many to surface to Slack
-MAX_AGE_DAYS = 7         # ignore articles older than this
+MAX_AGE_DAYS = 2         # ignore articles older than this
 
 AUDIENCE_CONTEXT = (
     "Creative directors, video producers, independent filmmakers, and founders "
@@ -296,12 +296,24 @@ def build_slack_payload(picks: list[dict]) -> dict:
                 "text": {
                     "type": "mrkdwn",
                     "text": (
-                        f"*{i}. <{pick['url']}|{pick['title']}>*\n"
+                        f"*{i}. {pick['title']}*\n"
                         f"_{pick['reason']}_\n\n"
                         f"{emoji} *Angle:* {angle_raw}\n\n"
                         f":pencil: *Suggested hook:*\n{hook}"
                     ),
                 },
+            }
+        )
+        blocks.append(
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Read article", "emoji": False},
+                        "url": pick["url"],
+                    }
+                ],
             }
         )
         blocks.append({"type": "divider"})
