@@ -18,6 +18,7 @@ from urllib.parse import quote_plus
 import feedparser
 import anthropic
 import requests
+from json_repair import repair_json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logging.basicConfig(
@@ -220,6 +221,25 @@ Each object:
 }}"""
 
 
+def _extract_json_array(raw: str) -> str:
+    """Pull the outermost JSON array out of Claude's reply, tolerant of markdown fences."""
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
+    if not match:
+        raise ValueError(f"No JSON array found in Claude response: {raw[:500]}")
+    return match.group()
+
+
+def _parse_picks(raw: str) -> list[dict]:
+    """Parse Claude's reply into a list of picks. Tries strict JSON first, then repair."""
+    candidate = _extract_json_array(raw)
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError as e:
+        log.warning("Strict JSON parse failed (%s) — attempting json-repair", e)
+        repaired = repair_json(candidate)
+        return json.loads(repaired)
+
+
 def rank_articles(articles: list[dict]) -> list[dict]:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -237,15 +257,37 @@ def rank_articles(articles: list[dict]) -> list[dict]:
     )
 
     raw = message.content[0].text.strip()
-    log.info("Claude raw response (first 300 chars): %s", raw[:300])
+    log.info("Claude raw response (%d chars): %s", len(raw), raw)
 
-    # Extract JSON array from anywhere in the response
-    match = re.search(r'\[.*\]', raw, re.DOTALL)
-    if not match:
-        raise ValueError(f"No JSON array found in Claude response: {raw[:500]}")
+    # Attempt 1: strict parse, fall back to json-repair on failure
+    try:
+        picks = _parse_picks(raw)
+        log.info("Claude selected %d articles", len(picks))
+        return picks
+    except (ValueError, json.JSONDecodeError) as e:
+        log.warning("Initial parse failed even after repair: %s — retrying with stricter prompt", e)
 
-    picks = json.loads(match.group())
-    log.info("Claude selected %d articles", len(picks))
+    # Attempt 2: ask Claude again, explicitly demanding clean JSON
+    retry_message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=4096,
+        system=SYSTEM_PROMPT,
+        messages=[
+            {"role": "user", "content": build_ranking_prompt(articles, n)},
+            {"role": "assistant", "content": raw},
+            {"role": "user", "content": (
+                "That response was not valid JSON and failed to parse. "
+                "Re-emit ONLY the JSON array — no markdown fences, no prose. "
+                "Escape every double-quote inside string values with a backslash. "
+                "Do not use curly/smart quotes inside string values."
+            )},
+        ],
+    )
+    retry_raw = retry_message.content[0].text.strip()
+    log.info("Claude retry response (%d chars): %s", len(retry_raw), retry_raw)
+
+    picks = _parse_picks(retry_raw)
+    log.info("Claude selected %d articles (after retry)", len(picks))
     return picks
 
 

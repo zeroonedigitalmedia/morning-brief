@@ -2,7 +2,7 @@ name: Morning Brief
 
 on:
   schedule:
-    - cron: "30 12 * * 1-5"   # 5:30am PDT (UTC-7) / 4:30am PST — GH Actions can lag 30-60min, targets ~6:30am delivery
+    - cron: "17 8 * * 1-5"    # 1:17am PDT (UTC-7) / 12:17am PST — early off-peak UTC slot, targets pre-5am PT delivery even with typical 3-4hr GH Actions lag
   workflow_dispatch:           # lets you trigger it manually from GitHub UI
 
 jobs:
