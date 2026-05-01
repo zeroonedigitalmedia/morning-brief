@@ -46,25 +46,55 @@ TOPICS = {
 
 # Direct RSS feeds from trusted outlets
 DIRECT_FEEDS = {
-    # Trade press — film & entertainment
+    # Filmmaking — trade press
     "Variety": "https://variety.com/feed/",
     "Hollywood Reporter": "https://www.hollywoodreporter.com/feed/",
     "Deadline": "https://deadline.com/feed/",
     "IndieWire": "https://www.indiewire.com/feed/",
     "No Film School": "https://nofilmschool.com/rss.xml",
+    "TheWrap": "https://www.thewrap.com/feed/",
+    "/Film": "https://www.slashfilm.com/feed/",
+    "The Film Stage": "https://thefilmstage.com/feed/",
+    "MovieMaker": "https://www.moviemaker.com/feed/?post_type=post",
+    # Cinematography & production tech
     "ProVideo Coalition": "https://www.provideocoalition.com/feed/",
-    # Trade press — marketing & advertising
+    "CineD": "https://www.cined.com/feed/",
+    "Newsshooter": "https://www.newsshooter.com/feed/",
+    "Y.M.Cinema": "https://ymcinema.com/feed/",
+    "Definition Magazine": "https://definitionmagazine.com/feed",
+    # Advertising & marketing
     "Ad Age": "https://adage.com/rss/rss.xml",
     "AdWeek": "https://www.adweek.com/feed/",
     "Digiday": "https://digiday.com/feed/",
-    # General business & tech
+    "Muse by Clio": "https://musebycl.io/feed",
+    "Adland": "https://adland.tv/rss.xml",
+    # General tech
+    "TechCrunch": "https://techcrunch.com/feed/",
+    "The Verge": "https://www.theverge.com/rss/index.xml",
+    "Ars Technica": "https://feeds.arstechnica.com/arstechnica/index",
+    "404 Media": "https://www.404media.co/rss",
+    "Platformer": "https://www.platformer.news/rss",
+    "Big Technology": "https://www.bigtechnology.com/feed",
+    # General business & culture
     "The Economist": "https://www.economist.com/rss/the_world_this_week_rss.xml",
     "Fast Company": "https://www.fastcompany.com/latest/rss",
     "Wired": "https://www.wired.com/feed/rss",
     "Vice": "https://www.vice.com/en/rss",
+    # Bay Area
+    "SF Standard": "https://sfstandard.com/feed/",
+    "Mission Local": "https://missionlocal.org/feed/",
+    "SF Chronicle Bay Area": "https://www.sfchronicle.com/rss/feed/Bay-Area-News-3.php",
+    "Eater SF": "https://sf.eater.com/rss/index.xml",
+    "The Bold Italic": "https://thebolditalic.com/feed",
+    # Corporate comedy & satire
+    "McSweeney's": "https://www.mcsweeneys.net/rss/",
+    "Defector": "https://defector.com/feed",
+    "Reel 360": "https://reel360.com/feed/",
+    "The Onion": "https://www.theonion.com/rss",
+    "Reductress": "https://reductress.com/feed/",
 }
 
-ARTICLES_PER_FEED = 15   # how many articles to pull per topic
+ARTICLES_PER_FEED = 6    # how many articles to pull per feed (kept low — we have many feeds)
 TOP_N = 6                # how many to surface to Slack
 MAX_AGE_DAYS = 2         # ignore articles older than this
 
