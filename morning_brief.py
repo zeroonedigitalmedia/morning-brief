@@ -46,7 +46,18 @@ TOPICS = {
 
 # Direct RSS feeds from trusted outlets
 DIRECT_FEEDS = {
+    # Trade press — film & entertainment
+    "Variety": "https://variety.com/feed/",
+    "Hollywood Reporter": "https://www.hollywoodreporter.com/feed/",
+    "Deadline": "https://deadline.com/feed/",
+    "IndieWire": "https://www.indiewire.com/feed/",
+    "No Film School": "https://nofilmschool.com/rss.xml",
+    "ProVideo Coalition": "https://www.provideocoalition.com/feed/",
+    # Trade press — marketing & advertising
     "Ad Age": "https://adage.com/rss/rss.xml",
+    "AdWeek": "https://www.adweek.com/feed/",
+    "Digiday": "https://digiday.com/feed/",
+    # General business & tech
     "The Economist": "https://www.economist.com/rss/the_world_this_week_rss.xml",
     "Fast Company": "https://www.fastcompany.com/latest/rss",
     "Wired": "https://www.wired.com/feed/rss",
