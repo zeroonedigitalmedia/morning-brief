@@ -199,7 +199,9 @@ His audience: {AUDIENCE_CONTEXT}
 
 Pick stories with real signal — gear shifts, business model changes, industry disruption, or local
 SF/LA/NYC angles. Skip puff pieces and press releases.
-Spread picks across different topics — do not over-index on AI stories."""
+Spread picks across different topics. HARD CAP: no more than 3 of the 6 picks may be AI-centric
+(stories where AI is the primary subject, not just incidental). Prefer non-AI angles when the
+quality is comparable."""
 
 
 def build_ranking_prompt(articles: list[dict], n: int) -> str:
